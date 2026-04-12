@@ -11,16 +11,18 @@ var _ = net.Listen
 var _ = os.Exit
 
 func handleConn(conn net.Conn) {
-	buf := make([]byte, 1024)
-	for {
-		n, err := conn.Read(buf)
+	cr := NewConnectionReader(conn, 1024)
+	buf := make([]byte, 4)
 
-		data := []byte{}
-		if n > 0 {
-			data = buf[:n]
+	for {
+		_, err := cr.Read(buf)
+
+		if err != nil {
+			fmt.Println("Error reading PING", err.Error())
+			return
 		}
 		
-		if n > 0 && string(data) == "PING" {
+		if string(buf) == "PING" {
 			fmt.Println("PING recvd")
 			_, err := conn.Write([]byte("+PONG\r\n"))
 			if err != nil {
