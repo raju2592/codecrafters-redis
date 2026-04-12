@@ -12,9 +12,9 @@ var _ = os.Exit
 
 func handleConn(conn net.Conn) {
 	cr := NewConnectionReader(conn, 1024)
-	buf := make([]byte, 4)
 
 	for {
+		buf := make([]byte, 4)
 		_, err := cr.Read(buf)
 
 		if err != nil {

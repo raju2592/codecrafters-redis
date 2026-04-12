@@ -1,6 +1,9 @@
 package main
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 type RingBuffer struct {
 	buf []byte;
@@ -50,4 +53,8 @@ func (rb *RingBuffer) Read(buf []byte) int {
 	}
 
 	return toRead
+}
+
+func (rb *RingBuffer) Print() {
+	fmt.Printf("%d %d %d\n", rb.start, rb.end, rb.cap)
 }

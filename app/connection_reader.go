@@ -24,6 +24,9 @@ func NewConnectionReader(conn net.Conn, bufSize int) *ConnectionReader {
 
 func (cr *ConnectionReader) Read(buf []byte) (int, error) {
 	toRead := len(buf)
+
+	fmt.Printf("Read request for bytes: %d\n", toRead)
+
 	pos := 0
 
 	netData := make([]byte, cr.bufSize)
@@ -35,9 +38,11 @@ func (cr *ConnectionReader) Read(buf []byte) (int, error) {
 		pos += r
 
 		if pos == toRead {
+			cr.rb.Print()
 			return toRead, nil
 		}
 
+		fmt.Printf("partial data: %s\n", string(buf))
 		if cr.connErr != nil {
 			return pos, cr.connErr
 		}
