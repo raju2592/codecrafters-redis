@@ -11,25 +11,23 @@ var _ = net.Listen
 var _ = os.Exit
 
 func handleConn(conn net.Conn) {
-	cr := NewConnectionReader(conn, 1024)
+	// cr := NewConnectionReader(conn, 1024)
 
 	for {
-		buf := make([]byte, 4)
-		_, err := cr.Read(buf)
+		buf := make([]byte, 1024)
+		_, err := conn.Read(buf)
 
 		if err != nil {
 			fmt.Println("Error reading PING", err.Error())
 			return
 		}
-		
-		if string(buf) == "PING" {
-			fmt.Println("PING recvd")
-			_, err := conn.Write([]byte("+PONG\r\n"))
-			if err != nil {
-				fmt.Println("Error writing to connection: ", err.Error())
-				conn.Close()
-				return
-			}
+
+		fmt.Println("PING recvd")
+		_, err = conn.Write([]byte("+PONG\r\n"))
+		if err != nil {
+			fmt.Println("Error writing to connection: ", err.Error())
+			conn.Close()
+			return
 		}
 
 		if err != nil {
