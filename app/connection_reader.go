@@ -38,6 +38,7 @@ func (cr *ConnectionReader) Read(buf []byte) (int, error) {
 		pos += r
 
 		if pos == toRead {
+			fmt.Printf("returing dataa, %s", string(buf))
 			cr.rb.Print()
 			return toRead, nil
 		}
