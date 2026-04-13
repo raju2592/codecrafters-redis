@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 )
 
 // Ensures gofmt doesn't remove the "net" and "os" imports in stage 1 (feel free to remove this!)
@@ -11,19 +12,44 @@ var _ = net.Listen
 var _ = os.Exit
 
 func handleConn(conn net.Conn) {
-	// cr := NewConnectionReader(conn, 1024)
+	cr := NewConnectionReader(conn, 1024)
 
 	for {
-		buf := make([]byte, 1024)
-		_, err := conn.Read(buf)
+		// buf := make([]byte, 1024)
+		// _, err := conn.Read(buf)
 
+
+
+		// fmt.Println("PING recvd")
+
+		v, err := ParseValue(cr.ReadByte)
 		if err != nil {
-			fmt.Println("Error reading PING", err.Error())
+			fmt.Println("Error parsing command", err.Error())
 			return
 		}
 
-		fmt.Println("PING recvd")
-		_, err = conn.Write([]byte("+PONG\r\n"))
+		input := v.value.([]RespValue)
+
+		command := input[0]
+
+		var commandName string
+		if command.ttype == RespSimpleString {
+			commandName = command.value.(string)
+		} else {
+			commandName = string(command.value.([]byte))
+		}
+
+		var reply []byte
+
+		switch strings.ToUpper(commandName) {
+		case "PING":
+			reply = []byte("+PONG\r\n")
+		case "ECHO":
+			commandValue := input[1].value.([]byte)
+			reply = SerializeBulkString(commandValue)
+		}
+
+		_, err = conn.Write(reply)
 		if err != nil {
 			fmt.Println("Error writing to connection: ", err.Error())
 			conn.Close()

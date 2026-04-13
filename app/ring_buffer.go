@@ -55,6 +55,16 @@ func (rb *RingBuffer) Read(buf []byte) int {
 	return toRead
 }
 
+func (rb *RingBuffer) ReadByte() (byte, bool) {
+	if rb.Size() == 0 {
+		return 0, false
+	}
+
+	b := rb.buf[rb.start]
+	rb.start = (rb.start + 1) % rb.cap
+	return b, true
+}
+
 func (rb *RingBuffer) Print() {
 	fmt.Printf("%d %d %d\n", rb.start, rb.end, rb.cap)
 }

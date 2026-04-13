@@ -61,3 +61,27 @@ func (cr *ConnectionReader) Read(buf []byte) (int, error) {
 
 	return pos, nil
 }
+
+func (cr *ConnectionReader) ReadByte() (byte, error) {
+	netData := make([]byte, cr.bufSize)
+
+	for cr.rb.Size() == 0 {
+		if cr.connErr != nil {
+			return 0, cr.connErr
+		}
+
+		n, err := cr.conn.Read(netData)
+
+		if n > 0 {
+			cr.rb.Write(netData[:n])
+		}
+
+		if err != nil {
+			cr.connErr = err
+		}
+	}
+
+	b, _ := cr.rb.ReadByte()
+	return b, nil
+}
+
