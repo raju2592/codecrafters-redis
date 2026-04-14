@@ -5,11 +5,12 @@ import (
 	"net"
 	"os"
 	"strings"
+
+	"github.com/codecrafters-io/redis-starter-go/app/store"
 )
 
-// Ensures gofmt doesn't remove the "net" and "os" imports in stage 1 (feel free to remove this!)
-var _ = net.Listen
-var _ = os.Exit
+var okResponse []byte = []byte("+OK\r\n")
+var nullBulkString []byte = []byte("$-1\r\n")
 
 func handleConn(conn net.Conn) {
 	cr := NewConnectionReader(conn, 1024)
@@ -47,6 +48,19 @@ func handleConn(conn net.Conn) {
 		case "ECHO":
 			commandValue := input[1].value.([]byte)
 			reply = SerializeBulkString(commandValue)
+		case "SET":
+			commandKey := string(input[1].value.([]byte))
+			commandValue := input[2].value.([]byte)
+			store.Set(commandKey, commandValue)
+			reply = okResponse
+		case "GET":
+			commandKey := string(input[1].value.([]byte))
+			value, ok := store.Get(commandKey)
+			if !ok {
+				reply = nullBulkString
+			} else {
+				reply = SerializeBulkString(value)
+			}
 		}
 
 		_, err = conn.Write(reply)
