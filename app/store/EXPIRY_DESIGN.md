@@ -8,7 +8,7 @@ Keys can be set with an optional expiry duration (e.g., `SET foo bar PX 100`). E
 
 ### Global `sync.Map` — key-value store
 
-Stores all key-value pairs as `key -> entry{value, expiresAt}`.
+Stores all key-value pairs as `key -> valueWithMeta{value, expiresAt}`.
 
 **Rationale:** `sync.Map` provides lock-free reads in the common case (non-expired key lookups), which is the dominant operation in a Redis-like workload. This avoids holding any mutex on the read hot path.
 
@@ -28,23 +28,18 @@ An array of N shards (e.g., 64), each containing:
 
 ## Operations
 
-### `Set(key, value)` — no expiry
+### `Set(key, value, options)`
 
-1. Write `entry{value, zero expiresAt}` to `sync.Map`.
-2. Hash key to find shard. Lock shard.
-3. If key exists in shard's map, swap-delete it from the slice and remove from map.
-4. Unlock shard.
+A single function handles both expiry and non-expiry cases based on `SetOptions.Ttl`.
 
-**Rationale:** Must remove from expiry tracking in case this key previously had an expiry.
+1. Hash key to find shard. Lock shard.
+2. Create `valueWithMeta{value, expiresAt}`. If `Ttl > 0`, set `expiresAt = time.Now() + Ttl`.
+3. Write to `sync.Map`.
+4. If `Ttl > 0`: add key to shard's slice+map if not already present (dedup via map check).
+5. If `Ttl == 0`: remove key from shard's slice+map if present (in case it previously had an expiry).
+6. Unlock shard.
 
-### `SetWithExpiry(key, value, duration)`
-
-1. Write `entry{value, time.Now().Add(duration)}` to `sync.Map`.
-2. Hash key to find shard. Lock shard.
-3. If key is not in shard's map, append to slice and record index in map.
-4. Unlock shard.
-
-**Rationale:** The map check (step 3) prevents duplicate entries in the slice when the same key is set with expiry multiple times. Without this, repeated `SetWithExpiry` calls would bloat the slice.
+**Rationale:** The map check (step 4) prevents duplicate entries in the slice when the same key is set with expiry multiple times. Step 5 cleans up expiry tracking when a key is overwritten without a TTL.
 
 ### `Get(key)` — passive expiration
 
@@ -66,14 +61,13 @@ A pool of consumer goroutines (e.g., 3-5) reads from the passive expiry channel.
 
 ### Active expiry worker
 
-A single background goroutine runs on a ticker (e.g., every 100ms). On each tick:
+A single background goroutine runs on a ticker (every 1000ms). On each tick:
 
-1. Pick a random shard. Lock it.
-2. Sample up to 20 random keys from the shard's slice.
-3. For each sampled key, load from `sync.Map` and check expiry.
-4. If expired: delete from `sync.Map`, swap-delete from shard's slice, remove from shard's map.
-5. If not expired or not found: skip (key was overwritten or already deleted).
-6. Unlock shard.
+1. Try up to `N_RANDOM_SAMPLE_SIZE * 2` iterations to collect `N_RANDOM_SAMPLE_SIZE` (20) keys:
+   a. Pick a random shard. Lock it.
+   b. If shard's slice is empty, unlock and try again.
+   c. Pick a random key from the shard's slice. Record it. Unlock.
+2. For each collected key, call `deleteIfExpired(key)` which locks the shard, re-checks the entry in `sync.Map`, and deletes if still expired (from both `sync.Map` and shard's slice+map).
 
 **Rationale:** Passive expiration alone is insufficient — keys that are never read again would leak memory. The active worker ensures all expired keys are eventually cleaned up. Random sampling (rather than full scans) keeps the cost bounded per tick, matching Redis's approach. The active worker is fully independent from the passive consumers — it does not interact with the channel.
 
