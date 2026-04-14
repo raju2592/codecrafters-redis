@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/codecrafters-io/redis-starter-go/app/store"
@@ -11,6 +12,15 @@ import (
 
 var okResponse []byte = []byte("+OK\r\n")
 var nullBulkString []byte = []byte("$-1\r\n")
+
+func getStringValue(v RespValue) string {
+	if v.ttype == RespSimpleString {
+		return v.value.(string)
+	} else if v.ttype == RespBulkString {
+		return string(v.value.([]byte))
+	}
+	return ""
+}
 
 func handleConn(conn net.Conn) {
 	cr := NewConnectionReader(conn, 1024)
@@ -33,15 +43,11 @@ func handleConn(conn net.Conn) {
 
 		command := input[0]
 
-		var commandName string
-		if command.ttype == RespSimpleString {
-			commandName = command.value.(string)
-		} else {
-			commandName = string(command.value.([]byte))
-		}
+		commandName := getStringValue(command)
 
 		var reply []byte
 
+		// TODO: this does not handle any invalid commands
 		switch strings.ToUpper(commandName) {
 		case "PING":
 			reply = []byte("+PONG\r\n")
@@ -51,7 +57,23 @@ func handleConn(conn net.Conn) {
 		case "SET":
 			commandKey := string(input[1].value.([]byte))
 			commandValue := input[2].value.([]byte)
-			store.Set(commandKey, commandValue)
+
+			var ttl int
+
+			for i := 3; i < len(input); i += 2 {
+				optionKey := strings.ToUpper(getStringValue(input[i]))
+				switch optionKey {
+				case "EX":
+					ttl, _ = strconv.Atoi(getStringValue(input[i + 1]))
+					ttl *= 1000
+				case "PX":
+					ttl, _ = strconv.Atoi(getStringValue(input[i + 1]))
+				}
+			}
+
+			store.Set(commandKey, commandValue, store.SetOptions{
+				Ttl: ttl,
+			})
 			reply = okResponse
 		case "GET":
 			commandKey := string(input[1].value.([]byte))
@@ -66,12 +88,6 @@ func handleConn(conn net.Conn) {
 		_, err = conn.Write(reply)
 		if err != nil {
 			fmt.Println("Error writing to connection: ", err.Error())
-			conn.Close()
-			return
-		}
-
-		if err != nil {
-			fmt.Println("Error reading from connection: ", err.Error())
 			conn.Close()
 			return
 		}
