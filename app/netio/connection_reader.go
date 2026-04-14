@@ -1,4 +1,4 @@
-package main
+package netio
 
 import (
 	"fmt"
@@ -84,4 +84,3 @@ func (cr *ConnectionReader) ReadByte() (byte, error) {
 	b, _ := cr.rb.ReadByte()
 	return b, nil
 }
-

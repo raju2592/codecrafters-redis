@@ -1,4 +1,4 @@
-package main
+package resp
 
 import (
 	"errors"
@@ -16,8 +16,8 @@ const (
 )
 
 type RespValue struct {
-	ttype RespType
-	value interface{}
+	Ttype RespType
+	Value interface{}
 }
 
 func parseUntilLineBreak(nextByte func()(byte, error)) ([]byte, error) {
@@ -144,8 +144,8 @@ func ParseValue(nextByte func()(byte, error)) (RespValue, error) {
 			return RespValue{}, err
 		}
 		return RespValue{
-			ttype: RespInt,
-			value: v,
+			Ttype: RespInt,
+			Value: v,
 		}, nil
 	case byte('+'):
 		v, err := ParseSimpleString(nextByte)
@@ -153,8 +153,8 @@ func ParseValue(nextByte func()(byte, error)) (RespValue, error) {
 			return RespValue{}, err
 		}
 		return RespValue{
-			ttype: RespSimpleString,
-			value: v,
+			Ttype: RespSimpleString,
+			Value: v,
 		}, nil
 	case byte('*'):
 		v, err := ParseArray(nextByte)
@@ -162,8 +162,8 @@ func ParseValue(nextByte func()(byte, error)) (RespValue, error) {
 			return RespValue{}, err
 		}
 		return RespValue{
-			ttype: RespArray,
-			value: v,
+			Ttype: RespArray,
+			Value: v,
 		}, nil
 	case byte('$'):
 		v, err := ParseBulkString(nextByte)
@@ -171,8 +171,8 @@ func ParseValue(nextByte func()(byte, error)) (RespValue, error) {
 			return RespValue{}, err
 		}
 		return RespValue{
-			ttype: RespBulkString,
-			value: v,
+			Ttype: RespBulkString,
+			Value: v,
 		}, nil
 	}
 
