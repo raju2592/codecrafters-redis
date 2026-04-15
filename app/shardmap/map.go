@@ -46,11 +46,19 @@ func (sm *ShardedMap[K, V]) Get(key K) (V, bool) {
 	return v, ok
 }
 
-func (sm *ShardedMap[K, V]) Update(key K, fn func(old V, exists bool) V) {
+// Update atomically modifies the value for a key. The callback receives the
+// current value and whether it exists, and returns the new value and whether
+// to keep it. If keep is false, the key is deleted.
+func (sm *ShardedMap[K, V]) Update(key K, fn func(old V, exists bool) (V, bool)) {
 	s := sm.getShard(key)
 	s.mu.Lock()
 	old, exists := s.data[key]
-	s.data[key] = fn(old, exists)
+	newVal, keep := fn(old, exists)
+	if keep {
+		s.data[key] = newVal
+	} else {
+		delete(s.data, key)
+	}
 	s.mu.Unlock()
 }
 
