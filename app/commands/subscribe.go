@@ -12,6 +12,6 @@ func SubscribeHandler(input []resp.RespValue, conn *ConnMeta) []byte {
 	return resp.SerializeArray([]resp.RespValue{
 		{ Ttype: resp.RespBulkString, Value: []byte("subscribe") },
 		{ Ttype: resp.RespBulkString, Value: []byte(channel) },
-		{ Ttype: resp.RespInt, Value: len(conn.subscribedChannels) },
+		{ Ttype: resp.RespInt, Value: int64(len(conn.subscribedChannels)) },
 	})
 }
