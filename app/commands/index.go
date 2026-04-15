@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 	"net"
+	"slices"
 	"strings"
 
 	"github.com/codecrafters-io/redis-starter-go/app/netio"
@@ -22,11 +23,29 @@ var handlers = map[string]CommandHandler{
 	"SUBSCRIBE": SubscribeHandler,
 }
 
+var subscribeModeAllowedCommands = []string{
+	"SUBSCRIBE",
+	"UNSUBSCRIBE",
+	"PSUBSCRIBE",
+	"PUNSUBSCRIBE",
+	"PING",
+	"QUIT",
+}
+
+func IsCommandAllowed(conn *ConnMeta, commandName string) bool {
+	if conn.mode == NormalMode {
+		return true
+	}
+
+	return slices.Contains(subscribeModeAllowedCommands, commandName)
+}
+
 func HandleConn(conn net.Conn) {
 	cr := netio.NewConnectionReader(conn, 1024)
 	
-	connMeta := ConnMeta{
+	connMeta := &ConnMeta{
     Conn:               conn,
+		mode: NormalMode,
     subscribedChannels: make(map[string]bool),
 	}
 
@@ -43,8 +62,10 @@ func HandleConn(conn net.Conn) {
 
 		var reply []byte
 
-		if handler, ok := handlers[commandName]; ok {
-			reply = handler(input, &connMeta)
+		if !IsCommandAllowed(connMeta, commandName) {
+			reply = []byte(fmt.Sprintf("- ERR Can't execute '%s': only (P|S)SUBSCRIBE / (P|S)UNSUBSCRIBE / PING / QUIT / RESET are allowed in this context\r\n", commandName))
+		} else if handler, ok := handlers[commandName]; ok {
+			reply = handler(input, connMeta)
 		}
 
 		_, err = conn.Write(reply)
