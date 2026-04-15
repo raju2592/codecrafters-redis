@@ -63,7 +63,7 @@ func HandleConn(conn net.Conn) {
 		var reply []byte
 
 		if !IsCommandAllowed(connMeta, commandName) {
-			reply = []byte(fmt.Sprintf("- ERR Can't execute '%s': only (P|S)SUBSCRIBE / (P|S)UNSUBSCRIBE / PING / QUIT / RESET are allowed in this context\r\n", commandName))
+			reply = []byte(fmt.Sprintf("ERR Can't execute '%s': only (P|S)SUBSCRIBE / (P|S)UNSUBSCRIBE / PING / QUIT / RESET are allowed in this context\r\n", strings.ToLower(commandName)))
 		} else if handler, ok := handlers[commandName]; ok {
 			reply = handler(input, connMeta)
 		}
