@@ -46,6 +46,14 @@ func (sm *ShardedMap[K, V]) Get(key K) (V, bool) {
 	return v, ok
 }
 
+func (sm *ShardedMap[K, V]) Update(key K, fn func(old V, exists bool) V) {
+	s := sm.getShard(key)
+	s.mu.Lock()
+	old, exists := s.data[key]
+	s.data[key] = fn(old, exists)
+	s.mu.Unlock()
+}
+
 func (sm *ShardedMap[K, V]) Delete(key K) {
 	s := sm.getShard(key)
 	s.mu.Lock()

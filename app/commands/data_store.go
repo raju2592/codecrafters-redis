@@ -1,4 +1,4 @@
-package store
+package commands
 
 import (
 	"hash/fnv"
@@ -14,7 +14,7 @@ const N_RANDOM_SAMPLE_SIZE = 20
 
 type keyShard struct {
 	mu sync.Mutex
-	keyWithExpMap map[string]int	
+	keyWithExpMap map[string]int
 	keyWithExp []string
 }
 

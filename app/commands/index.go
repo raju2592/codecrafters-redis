@@ -21,6 +21,7 @@ var handlers = map[string]CommandHandler{
 	"SET":  SetHandler,
 	"GET":  GetHandler,
 	"SUBSCRIBE": SubscribeHandler,
+	"PUBLISH": PublishHandler,
 }
 
 var subscribeModeAllowedCommands = []string{

@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/codecrafters-io/redis-starter-go/app/resp"
-	"github.com/codecrafters-io/redis-starter-go/app/store"
 )
 
 func SetHandler(input []resp.RespValue, conn *ConnMeta) []byte {
@@ -25,7 +24,7 @@ func SetHandler(input []resp.RespValue, conn *ConnMeta) []byte {
 		}
 	}
 
-	store.Set(commandKey, commandValue, store.SetOptions{
+	Set(commandKey, commandValue, SetOptions{
 		Ttl: ttl,
 	})
 	return okResponse
