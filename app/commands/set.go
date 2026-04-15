@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"net"
 	"strconv"
 	"strings"
 
@@ -9,7 +8,7 @@ import (
 	"github.com/codecrafters-io/redis-starter-go/app/store"
 )
 
-func SetHandler(input []resp.RespValue, conn net.Conn) []byte {
+func SetHandler(input []resp.RespValue, conn *ConnMeta) []byte {
 	commandKey := string(input[1].Value.([]byte))
 	commandValue := input[2].Value.([]byte)
 

@@ -12,7 +12,7 @@ import (
 var okResponse []byte = []byte("+OK\r\n")
 var nullBulkString []byte = []byte("$-1\r\n")
 
-type CommandHandler func(input []resp.RespValue, conn net.Conn) []byte
+type CommandHandler func(input []resp.RespValue, conn *ConnMeta) []byte
 
 var handlers = map[string]CommandHandler{
 	"PING": PingHandler,
@@ -24,6 +24,11 @@ var handlers = map[string]CommandHandler{
 
 func HandleConn(conn net.Conn) {
 	cr := netio.NewConnectionReader(conn, 1024)
+	
+	connMeta := ConnMeta{
+    Conn:               conn,
+    subscribedChannels: make(map[string]bool),
+	}
 
 	for {
 		v, err := resp.ParseValue(cr.ReadByte)
@@ -39,7 +44,7 @@ func HandleConn(conn net.Conn) {
 		var reply []byte
 
 		if handler, ok := handlers[commandName]; ok {
-			reply = handler(input, conn)
+			reply = handler(input, &connMeta)
 		}
 
 		_, err = conn.Write(reply)

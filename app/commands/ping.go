@@ -1,11 +1,9 @@
 package commands
 
 import (
-	"net"
-
 	"github.com/codecrafters-io/redis-starter-go/app/resp"
 )
 
-func PingHandler(input []resp.RespValue, conn net.Conn) []byte {
+func PingHandler(input []resp.RespValue, conn *ConnMeta) []byte {
 	return []byte("+PONG\r\n")
 }
