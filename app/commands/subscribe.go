@@ -11,10 +11,10 @@ func SubscribeHandler(input []resp.RespValue, conn *ConnMeta) []byte {
 	conn.mode = SubscribedMode
 
 	subscribers.Update(channel, func (conns []*ConnMeta, exists bool) []*ConnMeta {
-		if !exists {
-			return []*ConnMeta{conn}
-		}
-		return append(conns, conn)
+		newConns := make([]*ConnMeta, len(conns)+1)
+		copy(newConns, conns)
+		newConns[len(conns)] = conn
+		return newConns
 	})
 
 	return resp.SerializeArray([]resp.RespValue{

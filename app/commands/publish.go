@@ -19,7 +19,9 @@ func PublishHandler(input []resp.RespValue, conn *ConnMeta) []byte {
 	})
 
 	for _, sub := range subs {
+		sub.mu.Lock()
 		_, err := sub.Write(data)
+		sub.mu.Unlock()
 		if err != nil {
 			fmt.Println("Error writing to connection: ", err.Error())
 		}

@@ -41,6 +41,8 @@ func IsCommandAllowed(conn *ConnMeta, commandName string) bool {
 	return slices.Contains(subscribeModeAllowedCommands, commandName)
 }
 
+// TODO: On connection close, remove the connection from all subscribed channels
+// to prevent stale entries in the subscriber lists.
 func HandleConn(conn net.Conn) {
 	cr := netio.NewConnectionReader(conn, 1024)
 	

@@ -1,6 +1,9 @@
 package commands
 
-import "net"
+import (
+	"net"
+	"sync"
+)
 
 type ConnMode int
 
@@ -10,6 +13,7 @@ const (
 )
 
 type ConnMeta struct {
+	mu sync.Mutex
 	net.Conn
 	subscribedChannels map[string]bool
 	mode ConnMode
