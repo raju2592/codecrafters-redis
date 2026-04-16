@@ -19,5 +19,7 @@ func init() {
 		"MULTI":       MultiHandler,
 		"EXEC":        ExecHandler,
 		"DISCARD": DiscardHandler,
+		"WATCH": WatchHandler,
+		"UNWATCH": UnwatchHandler,
 	}
 }

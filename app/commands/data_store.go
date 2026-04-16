@@ -26,11 +26,12 @@ type valueWithMeta struct {
 
 var data sync.Map
 var shards []keyShard = make([]keyShard, N_SHARD)
+var watchers map[string][]*ConnMeta = make(map[string][]*ConnMeta)
 
 func handleExpiredKeys() {
 	for {
 		key := <- expiredKeys
-		deleteIfExpired(key)
+		DeleteIfExpired(key)
 	}
 }
 
@@ -73,10 +74,9 @@ func doRandomExpiration() {
 		}
 
 		for _, key := range keys {
-			deleteIfExpired(key)
+			DeleteIfExpired(key)
 		}
 	}
-
 }
 
 var expiredKeys chan string = make(chan string, 1000)
@@ -132,7 +132,7 @@ func hasExpired(m time.Time) bool{
 	return !m.IsZero() && m.Before(time.Now())
 }
 
-func deleteIfExpired(key string) {
+func DeleteIfExpired(key string) {
 	i := getShardLock(key)
 	defer releaseShardLock(i)
 	v, ok := data.Load(key)
@@ -143,6 +143,7 @@ func deleteIfExpired(key string) {
 	if hasExpired(vm.expiresAt) {
 		data.Delete(key)
 		removeKeyWithExp(key, i)
+		dirtyWatchers(key)
 	}
 }
 
@@ -169,6 +170,7 @@ func Set(key string, value []byte, opt SetOptions) {
 	} else {
 		removeKeyWithExp(key, i)
 	}
+	dirtyWatchers(key)
 }
 
 
@@ -226,5 +228,50 @@ func Incr(key string) (int, error) {
 		expiresAt: exp,
 	})
 
+	dirtyWatchers(key)
+
 	return intVal, nil
+}
+
+// this assumes the key's shard lock is locked
+func dirtyWatchers(key string) {
+	wl, _ := watchers[key]
+	for _, conn := range wl {
+		conn.dirty.Store(true)
+	}
+}
+
+func Watch(key string, conn *ConnMeta) {
+	i := getShardLock(key)
+	defer releaseShardLock(i)
+
+	wl, _ := watchers[key]
+	wl = append(wl, conn)
+	watchers[key] = wl
+}
+
+func Unwatch(key string, conn *ConnMeta) {
+	i := getShardLock(key)
+	defer releaseShardLock(i)
+
+	wl, _ := watchers[key]
+
+	del := false
+	for i, w := range wl {
+		if w == conn {
+			del = true
+			wl[i] = wl[len(wl) - 1]
+		}
+	}
+
+	if !del {
+		return
+	}
+
+	if len(wl) == 1 {
+		delete(watchers, key)
+	} else {
+		wl = wl[:len(wl) - 1]
+		watchers[key] = wl
+	}
 }
