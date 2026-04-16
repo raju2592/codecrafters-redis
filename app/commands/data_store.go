@@ -3,6 +3,7 @@ package commands
 import (
 	"hash/fnv"
 	"math/rand"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -190,4 +191,41 @@ func Get(key string) ([]byte, bool) {
 	} else {
 		return nil, false
 	}
+}
+
+func Incr(key string) (int, error) {
+	i := getShardLock(key)
+	defer releaseShardLock(i)
+
+	v, ok := data.Load(key)
+
+	intVal := 1
+	var exp time.Time
+
+
+	if ok {
+		vm := v.(valueWithMeta)
+		if hasExpired(vm.expiresAt) {
+			queueExpiration(key)
+		} else {
+			v := vm.value
+			exp = vm.expiresAt
+
+			vInt, err := strconv.Atoi(string(v))
+
+			if err != nil {
+				return 0, err
+			}
+
+			intVal = vInt + 1
+		}
+	}
+
+
+	data.Store(key, valueWithMeta{
+		value: []byte(strconv.Itoa(intVal)),
+		expiresAt: exp,
+	})
+
+	return intVal, nil
 }

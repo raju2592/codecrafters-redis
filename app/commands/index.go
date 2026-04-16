@@ -23,6 +23,7 @@ var handlers = map[string]CommandHandler{
 	"SUBSCRIBE": SubscribeHandler,
 	"PUBLISH": PublishHandler,
 	"UNSUBSCRIBE": UnsubscribeHandler,
+	"INCR": IncrHandler,
 }
 
 var subscribeModeAllowedCommands = []string{
