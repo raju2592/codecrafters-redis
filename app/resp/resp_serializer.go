@@ -45,3 +45,7 @@ func SerializeArray(arr []RespValue) []byte{
 func SerializeError(msg string) []byte {
 	return []byte("-" + msg + "\r\n")
 }
+
+func SerializeSimpleString(msg string) []byte {
+	return []byte("+" + msg + "\r\n")
+}
