@@ -221,7 +221,6 @@ func Incr(key string) (int, error) {
 		}
 	}
 
-
 	data.Store(key, valueWithMeta{
 		value: []byte(strconv.Itoa(intVal)),
 		expiresAt: exp,

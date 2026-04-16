@@ -9,7 +9,7 @@ func IncrHandler(input []resp.RespValue, conn *ConnMeta) []byte {
 
 	v, err := Incr(commandKey)
 
-	if err != nil {
+	if err == nil {
 		return resp.SerializeInteger(int64(v))
 	}
 
