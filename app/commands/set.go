@@ -7,7 +7,7 @@ import (
 	"github.com/codecrafters-io/redis-starter-go/app/resp"
 )
 
-func SetHandler(input []resp.RespValue, conn *ConnMeta) []byte {
+func SetHandler(input []resp.RespValue, conn *ConnMeta) resp.RespValue {
 	commandKey := string(input[1].Value.([]byte))
 	commandValue := input[2].Value.([]byte)
 
@@ -27,5 +27,5 @@ func SetHandler(input []resp.RespValue, conn *ConnMeta) []byte {
 	Set(commandKey, commandValue, SetOptions{
 		Ttl: ttl,
 	})
-	return okResponse
+	return resp.RespValue{Ttype: resp.RespSimpleString, Value: "OK"}
 }

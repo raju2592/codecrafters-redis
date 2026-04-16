@@ -4,7 +4,7 @@ import (
 	"github.com/codecrafters-io/redis-starter-go/app/resp"
 )
 
-func SubscribeHandler(input []resp.RespValue, conn *ConnMeta) []byte {
+func SubscribeHandler(input []resp.RespValue, conn *ConnMeta) resp.RespValue {
 	channel := resp.GetStringValue(input[1])
 
 	conn.subscribedChannels[channel] = true
@@ -17,9 +17,9 @@ func SubscribeHandler(input []resp.RespValue, conn *ConnMeta) []byte {
 		return newConns, true
 	})
 
-	return resp.SerializeArray([]resp.RespValue{
+	return resp.RespValue{Ttype: resp.RespArray, Value: []resp.RespValue{
 		{ Ttype: resp.RespBulkString, Value: []byte("subscribe") },
 		{ Ttype: resp.RespBulkString, Value: []byte(channel) },
 		{ Ttype: resp.RespInt, Value: int64(len(conn.subscribedChannels)) },
-	})
+	}}
 }

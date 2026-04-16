@@ -13,6 +13,8 @@ const (
 	RespSimpleString
 	RespArray
 	RespBulkString
+	RespSimpleError
+	RespNull
 )
 
 type RespValue struct {

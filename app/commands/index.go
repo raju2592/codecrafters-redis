@@ -10,9 +10,6 @@ import (
 	"github.com/codecrafters-io/redis-starter-go/app/resp"
 )
 
-var okResponse []byte = []byte("+OK\r\n")
-var nullBulkString []byte = []byte("$-1\r\n")
-
 var subscribeModeAllowedCommands = []string{
 	"SUBSCRIBE",
 	"UNSUBSCRIBE",
@@ -52,21 +49,20 @@ func HandleConn(conn net.Conn) {
 
 		commandName := strings.ToUpper(resp.GetStringValue(input[0]))
 
-		var reply []byte
+		var result resp.RespValue
 
 		if !IsCommandAllowed(connMeta, commandName) {
-			reply = []byte(fmt.Sprintf("-ERR Can't execute '%s': only (P|S)SUBSCRIBE / (P|S)UNSUBSCRIBE / PING / QUIT / RESET are allowed in this context\r\n", strings.ToLower(commandName)))
+			result = resp.RespValue{Ttype: resp.RespSimpleError, Value: fmt.Sprintf("ERR Can't execute '%s': only (P|S)SUBSCRIBE / (P|S)UNSUBSCRIBE / PING / QUIT / RESET are allowed in this context", strings.ToLower(commandName))}
 		} else if handler, ok := handlers[commandName]; ok {
-			if connMeta.mode == MultiMode && commandName != "EXEC" {
+			if connMeta.mode == MultiMode && commandName != "EXEC" && commandName != "DISCARD" {
 				connMeta.commandQueue = append(connMeta.commandQueue, input)
-				reply = resp.SerializeSimpleString("QUEUED")
+				result = resp.RespValue{Ttype: resp.RespSimpleString, Value: "QUEUED"}
 			} else {
-				reply = handler(input, connMeta)
+				result = handler(input, connMeta)
 			}
 		}
 
-
-		_, err = conn.Write(reply)
+		_, err = conn.Write(resp.SerializeRespValue(result))
 		if err != nil {
 			fmt.Println("Error writing to connection: ", err.Error())
 			conn.Close()

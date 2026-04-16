@@ -4,7 +4,7 @@ import (
 	"github.com/codecrafters-io/redis-starter-go/app/resp"
 )
 
-func UnsubscribeHandler(input []resp.RespValue, conn *ConnMeta) []byte {
+func UnsubscribeHandler(input []resp.RespValue, conn *ConnMeta) resp.RespValue {
 	channel := resp.GetStringValue(input[1])
 
 	delete(conn.subscribedChannels, channel)
@@ -22,9 +22,9 @@ func UnsubscribeHandler(input []resp.RespValue, conn *ConnMeta) []byte {
 		return newConns, len(newConns) > 0
 	})
 
-	return resp.SerializeArray([]resp.RespValue{
+	return resp.RespValue{Ttype: resp.RespArray, Value: []resp.RespValue{
 		{ Ttype: resp.RespBulkString, Value: []byte("unsubscribe") },
 		{ Ttype: resp.RespBulkString, Value: []byte(channel) },
 		{ Ttype: resp.RespInt, Value: int64(len(conn.subscribedChannels)) },
-	})
+	}}
 }

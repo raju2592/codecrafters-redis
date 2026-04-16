@@ -6,23 +6,19 @@ import (
 	"github.com/codecrafters-io/redis-starter-go/app/resp"
 )
 
-func ExecHandler(input []resp.RespValue, conn *ConnMeta) []byte {
+func ExecHandler(input []resp.RespValue, conn *ConnMeta) resp.RespValue {
 	if conn.mode != MultiMode {
-		return resp.SerializeError("ERR EXEC without MULTI")
+		return resp.RespValue{Ttype: resp.RespSimpleError, Value: "ERR EXEC without MULTI"}
 	}
 
+	results := make([]resp.RespValue, len(conn.commandQueue))
 
-	n := len(conn.commandQueue)
-	res := append([]byte("*"), resp.EncodeInt(n)...)
-
-	for _, command := range conn.commandQueue {
+	for i, command := range conn.commandQueue {
 		commandName := strings.ToUpper(resp.GetStringValue(command[0]))
 		handler := handlers[commandName]
-
-		output := handler(command, conn)
-		res = append(res, output...)
+		results[i] = handler(command, conn)
 	}
 
 	conn.mode = NormalMode
-	return res
+	return resp.RespValue{Ttype: resp.RespArray, Value: results}
 }

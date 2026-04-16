@@ -2,7 +2,7 @@ package commands
 
 import "github.com/codecrafters-io/redis-starter-go/app/resp"
 
-type CommandHandler func(input []resp.RespValue, conn *ConnMeta) []byte
+type CommandHandler func(input []resp.RespValue, conn *ConnMeta) resp.RespValue
 
 var handlers map[string]CommandHandler
 
@@ -18,5 +18,6 @@ func init() {
 		"INCR":        IncrHandler,
 		"MULTI":       MultiHandler,
 		"EXEC":        ExecHandler,
+		"DISCARD": DiscardHandler,
 	}
 }
