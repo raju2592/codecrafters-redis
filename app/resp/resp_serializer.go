@@ -18,17 +18,17 @@ func SerializeBulkString(data []byte) []byte {
 	return ret
 }
 
-func encodeInt[T integer](i T) []byte {
+func EncodeInt[T integer](i T) []byte {
 	return append([]byte(strconv.FormatInt(int64(i), 10)), end...)
 }
 
 func SerializeInteger(i int64) []byte {
-	return append([]byte(":"), encodeInt(i)...)
+	return append([]byte(":"), EncodeInt(i)...)
 }
 
 func SerializeArray(arr []RespValue) []byte{
 	arrLen := len(arr)
-	data := append([]byte("*"), encodeInt(arrLen)...)
+	data := append([]byte("*"), EncodeInt(arrLen)...)
 	for _, e := range arr {
 		switch e.Ttype {
 		case RespBulkString:

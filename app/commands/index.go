@@ -13,21 +13,6 @@ import (
 var okResponse []byte = []byte("+OK\r\n")
 var nullBulkString []byte = []byte("$-1\r\n")
 
-type CommandHandler func(input []resp.RespValue, conn *ConnMeta) []byte
-
-var handlers = map[string]CommandHandler{
-	"PING": PingHandler,
-	"ECHO": EchoHandler,
-	"SET":  SetHandler,
-	"GET":  GetHandler,
-	"SUBSCRIBE": SubscribeHandler,
-	"PUBLISH": PublishHandler,
-	"UNSUBSCRIBE": UnsubscribeHandler,
-	"INCR": IncrHandler,
-	"MULTI": MultiHandler,
-	"EXEC": ExecHandler,
-}
-
 var subscribeModeAllowedCommands = []string{
 	"SUBSCRIBE",
 	"UNSUBSCRIBE",
