@@ -10,6 +10,7 @@ type ConnMode int
 const (
 	NormalMode = iota
 	SubscribedMode
+	MultiMode
 )
 
 type ConnMeta struct {

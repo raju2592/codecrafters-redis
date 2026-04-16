@@ -25,6 +25,7 @@ var handlers = map[string]CommandHandler{
 	"UNSUBSCRIBE": UnsubscribeHandler,
 	"INCR": IncrHandler,
 	"MULTI": MultiHandler,
+	"EXEC": ExecHandler,
 }
 
 var subscribeModeAllowedCommands = []string{
