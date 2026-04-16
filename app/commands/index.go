@@ -38,11 +38,11 @@ var subscribeModeAllowedCommands = []string{
 }
 
 func IsCommandAllowed(conn *ConnMeta, commandName string) bool {
-	if conn.mode == NormalMode {
-		return true
+	if conn.mode == SubscribedMode {
+		return slices.Contains(subscribeModeAllowedCommands, commandName)
 	}
 
-	return slices.Contains(subscribeModeAllowedCommands, commandName)
+	return true
 }
 
 // TODO: On connection close, remove the connection from all subscribed channels
