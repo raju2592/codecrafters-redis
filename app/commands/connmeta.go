@@ -3,6 +3,8 @@ package commands
 import (
 	"net"
 	"sync"
+
+	"github.com/codecrafters-io/redis-starter-go/app/resp"
 )
 
 type ConnMode int
@@ -18,4 +20,5 @@ type ConnMeta struct {
 	net.Conn
 	subscribedChannels map[string]bool
 	mode ConnMode
+	commandQueue [][]resp.RespValue
 }

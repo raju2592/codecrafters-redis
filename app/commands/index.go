@@ -72,8 +72,14 @@ func HandleConn(conn net.Conn) {
 		if !IsCommandAllowed(connMeta, commandName) {
 			reply = []byte(fmt.Sprintf("-ERR Can't execute '%s': only (P|S)SUBSCRIBE / (P|S)UNSUBSCRIBE / PING / QUIT / RESET are allowed in this context\r\n", strings.ToLower(commandName)))
 		} else if handler, ok := handlers[commandName]; ok {
-			reply = handler(input, connMeta)
+			if connMeta.mode == MultiMode {
+				connMeta.commandQueue = append(connMeta.commandQueue, input)
+				reply = resp.SerializeSimpleString("QUEUED")
+			} else {
+				reply = handler(input, connMeta)
+			}
 		}
+
 
 		_, err = conn.Write(reply)
 		if err != nil {
