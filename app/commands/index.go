@@ -19,6 +19,11 @@ var subscribeModeAllowedCommands = []string{
 	"QUIT",
 }
 
+var multiModePassthroughCommands = []string{
+	"EXEC",
+	"DISCARD",
+	"WATCH",
+}
 func IsCommandAllowed(conn *ConnMeta, commandName string) bool {
 	if conn.mode == SubscribedMode {
 		return slices.Contains(subscribeModeAllowedCommands, commandName)
@@ -54,7 +59,7 @@ func HandleConn(conn net.Conn) {
 		if !IsCommandAllowed(connMeta, commandName) {
 			result = resp.RespValue{Ttype: resp.RespSimpleError, Value: fmt.Sprintf("ERR Can't execute '%s': only (P|S)SUBSCRIBE / (P|S)UNSUBSCRIBE / PING / QUIT / RESET are allowed in this context", strings.ToLower(commandName))}
 		} else if handler, ok := handlers[commandName]; ok {
-			if connMeta.mode == MultiMode && commandName != "EXEC" && commandName != "DISCARD" {
+			if connMeta.mode == MultiMode && !slices.Contains(multiModePassthroughCommands, commandName) {
 				connMeta.commandQueue = append(connMeta.commandQueue, input)
 				result = resp.RespValue{Ttype: resp.RespSimpleString, Value: "QUEUED"}
 			} else {
