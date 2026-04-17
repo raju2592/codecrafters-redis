@@ -3,6 +3,7 @@ package commands
 import (
 	"hash/fnv"
 	"math/rand"
+	"slices"
 	"strconv"
 	"sync"
 	"time"
@@ -26,7 +27,7 @@ type valueWithMeta struct {
 
 var data sync.Map
 var shards []keyShard = make([]keyShard, N_SHARD)
-var watchers map[string][]*ConnMeta = make(map[string][]*ConnMeta)
+var watchers sync.Map
 
 func handleExpiredKeys() {
 	for {
@@ -235,8 +236,11 @@ func Incr(key string) (int, error) {
 
 // this assumes the key's shard lock is locked
 func dirtyWatchers(key string) {
-	wl, _ := watchers[key]
-	for _, conn := range wl {
+	v, ok := watchers.Load(key)
+	if !ok {
+		return
+	}
+	for _, conn := range v.([]*ConnMeta) {
 		conn.dirty.Store(true)
 	}
 }
@@ -245,16 +249,23 @@ func Watch(key string, conn *ConnMeta) {
 	i := getShardLock(key)
 	defer releaseShardLock(i)
 
-	wl, _ := watchers[key]
+	var wl []*ConnMeta
+	if v, ok := watchers.Load(key); ok {
+		wl = v.([]*ConnMeta)
+	}
 	wl = append(wl, conn)
-	watchers[key] = wl
+	watchers.Store(key, wl)
 }
 
 func Unwatch(key string, conn *ConnMeta) {
 	i := getShardLock(key)
 	defer releaseShardLock(i)
 
-	wl, _ := watchers[key]
+	v, ok := watchers.Load(key)
+	if !ok {
+		return
+	}
+	wl := v.([]*ConnMeta)
 
 	del := false
 	for i, w := range wl {
@@ -269,9 +280,30 @@ func Unwatch(key string, conn *ConnMeta) {
 	}
 
 	if len(wl) == 1 {
-		delete(watchers, key)
+		watchers.Delete(key)
 	} else {
 		wl = wl[:len(wl) - 1]
-		watchers[key] = wl
+		watchers.Store(key, wl)
+	}
+}
+
+func LockKeys(keys []string) func() {
+	indices := make([]int, len(keys))
+	for i, key := range keys {
+		pos := getShardIndex(key)
+		indices[i] = pos
+	}
+
+	slices.Sort(indices)
+	indices = slices.Compact(indices)
+
+	for _, pos := range indices {
+		shards[pos].mu.Lock()
+	}
+
+	return func ()  {
+		for _, pos := range indices {
+			shards[pos].mu.Unlock()
+		}
 	}
 }

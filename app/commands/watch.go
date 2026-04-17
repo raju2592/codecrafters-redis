@@ -15,6 +15,6 @@ func WatchHandler(input []resp.RespValue, conn *ConnMeta) resp.RespValue {
 	}
 
 	Watch(key, conn)
-	conn.watchedKeys[key] = true
+	conn.watchedKeys = append(conn.watchedKeys, key)
 	return resp.RespValue{Ttype: resp.RespSimpleString, Value: "OK"}
 }

@@ -9,9 +9,12 @@ func DiscardHandler(input []resp.RespValue, conn *ConnMeta) resp.RespValue {
 		return resp.RespValue{Ttype: resp.RespSimpleError, Value: "ERR DISCARD without MULTI"}
 	}
 
-	for key, _ := range conn.watchedKeys {
+	for _, key := range conn.watchedKeys {
 		Unwatch(key, conn)
 	}
+
+	conn.watchedKeys = nil
+	conn.dirty.Store(false)
 
 	conn.commandQueue = nil
 	conn.mode = NormalMode

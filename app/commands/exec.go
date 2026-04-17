@@ -12,18 +12,16 @@ func ExecHandler(input []resp.RespValue, conn *ConnMeta) resp.RespValue {
 	}
 
 
-	for key, _ := range conn.watchedKeys {
+	for _, key := range conn.watchedKeys {
 		// Check if watched keys expired
 		DeleteIfExpired(key)
-
-		// Unwatch key
-		Unwatch(key, conn)
 	}
 
 	res := resp.RespValue{
 		Ttype: resp.RespNull,
 	}
 
+	unlockKeys := LockKeys(conn.watchedKeys)
 
 	if !conn.dirty.Load() {
 		results := make([]resp.RespValue, len(conn.commandQueue))
@@ -36,6 +34,12 @@ func ExecHandler(input []resp.RespValue, conn *ConnMeta) resp.RespValue {
 
 		res = resp.RespValue{Ttype: resp.RespArray, Value: results}
 	}
+
+
+	unlockKeys();
+
+	conn.watchedKeys = nil
+	conn.dirty.Store(false)
 
 	conn.commandQueue = nil
 	conn.mode = NormalMode

@@ -22,6 +22,6 @@ type ConnMeta struct {
 	subscribedChannels map[string]bool
 	mode ConnMode
 	commandQueue [][]resp.RespValue
-	watchedKeys map[string]bool
+	watchedKeys []string
 	dirty atomic.Bool
 }
