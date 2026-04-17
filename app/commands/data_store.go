@@ -23,6 +23,7 @@ type keyShard struct {
 type valueWithMeta struct {
 	value []byte
 	expiresAt time.Time
+	ttype ValueType
 }
 
 var data sync.Map
@@ -193,6 +194,21 @@ func Get(key string) ([]byte, bool) {
 		return vm.value, ok
 	} else {
 		return nil, false
+	}
+}
+
+
+func GetType(key string) string {
+	v, ok := data.Load(key)
+	if ok {
+		vm := v.(valueWithMeta)
+		if hasExpired(vm.expiresAt) {
+			queueExpiration(key)
+			return TypeNone.String()
+		}
+		return vm.ttype.String()
+	} else {
+		return TypeNone.String()
 	}
 }
 

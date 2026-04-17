@@ -21,5 +21,6 @@ func init() {
 		"DISCARD": DiscardHandler,
 		"WATCH": WatchHandler,
 		"UNWATCH": UnwatchHandler,
+		"TYPE": TypeHandler,
 	}
 }
