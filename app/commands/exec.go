@@ -18,7 +18,7 @@ func ExecHandler(input []resp.RespValue, conn *ConnMeta) resp.RespValue {
 	}
 
 	res := resp.RespValue{
-		Ttype: resp.RespNull,
+		Ttype: resp.RespNullArray,
 	}
 
 	unlockKeys := LockKeys(conn.watchedKeys)

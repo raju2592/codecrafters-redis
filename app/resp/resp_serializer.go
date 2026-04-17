@@ -58,6 +58,8 @@ func SerializeRespValue(v RespValue) []byte {
 		return SerializeSimpleError(v.Value.(string))
 	case RespNull:
 		return []byte("$-1\r\n")
+	case RespNullArray:
+		return []byte("*-1\r\n")
 	}
 	return nil
 }

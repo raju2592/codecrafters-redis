@@ -15,6 +15,7 @@ const (
 	RespBulkString
 	RespSimpleError
 	RespNull
+	RespNullArray
 )
 
 type RespValue struct {
