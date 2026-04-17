@@ -65,6 +65,8 @@ func HandleConn(conn net.Conn) {
 			} else {
 				result = handler(input, connMeta)
 			}
+		} else {
+			result = resp.RespValue{Ttype: resp.RespSimpleError, Value: fmt.Sprintf("ERR unknown command '%s'", commandName)}
 		}
 
 		_, err = conn.Write(resp.SerializeRespValue(result))
