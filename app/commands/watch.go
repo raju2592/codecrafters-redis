@@ -5,7 +5,12 @@ import (
 )
 
 func WatchHandler(input []resp.RespValue, conn *ConnMeta) resp.RespValue {
-	key := string(input[1].Value.([]byte))
+	n := len(input)
+	keys := make([]string, n - 1)
+
+	for i, v := range input[:n - 1] {
+		keys[i] = string(v.Value.([]byte))
+	}
 
 	if conn.mode == MultiMode {
 		return resp.RespValue{
@@ -14,7 +19,10 @@ func WatchHandler(input []resp.RespValue, conn *ConnMeta) resp.RespValue {
 		}
 	}
 
-	Watch(key, conn)
-	conn.watchedKeys = append(conn.watchedKeys, key)
+	for _, key := range keys {
+		Watch(key, conn)
+	}
+
+	conn.watchedKeys = append(conn.watchedKeys, keys...)
 	return resp.RespValue{Ttype: resp.RespSimpleString, Value: "OK"}
 }
