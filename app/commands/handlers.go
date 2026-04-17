@@ -22,5 +22,6 @@ func init() {
 		"WATCH": WatchHandler,
 		"UNWATCH": UnwatchHandler,
 		"TYPE": TypeHandler,
+		"XADD": XaddHandler,
 	}
 }

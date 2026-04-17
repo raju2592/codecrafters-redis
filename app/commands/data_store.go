@@ -21,7 +21,7 @@ type keyShard struct {
 }
 
 type valueWithMeta struct {
-	value []byte
+	value interface{}
 	expiresAt time.Time
 	ttype ValueType
 }
@@ -191,7 +191,7 @@ func Get(key string) ([]byte, bool) {
 			queueExpiration(key)
 			return nil, false
 		}
-		return vm.value, ok
+		return vm.value.([]byte), ok
 	} else {
 		return nil, false
 	}
@@ -227,7 +227,7 @@ func Incr(key string) (int, error) {
 		if hasExpired(vm.expiresAt) {
 			queueExpiration(key)
 		} else {
-			v := vm.value
+			v := vm.value.([]byte)
 			exp = vm.expiresAt
 
 			vInt, err := strconv.Atoi(string(v))
@@ -324,3 +324,42 @@ func LockKeys(keys []string) func() {
 	}
 }
 
+type XaddOptions struct {
+	entryId string;
+	kv map[string][]byte
+}
+
+func loadValue(key string) (valueWithMeta, bool) {
+	v, ok := data.Load(key)
+
+	if ok {
+		vm := v.(valueWithMeta)
+		return vm, true
+	}
+
+	return valueWithMeta{}, false
+}
+
+
+// this currently does not handle 
+// existing key of diffrent type
+func Xadd(key string, opt XaddOptions) {
+	i := getShardLock(key)
+	defer releaseShardLock(i)
+
+	vm, ok := loadValue(key)
+
+	if !ok {
+		vm = valueWithMeta{
+			ttype: TypeStream,
+			value: make(map[string]map[string][]byte),
+		}
+	}
+
+	entriesMap := vm.value.(map[string]map[string][]byte)
+	entriesMap[opt.entryId] = opt.kv
+
+	data.Store(key, vm)
+
+	dirtyWatchers(key)
+}
