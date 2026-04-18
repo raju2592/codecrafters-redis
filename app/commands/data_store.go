@@ -394,13 +394,13 @@ func Xadd(key string, opt XaddOptions) error {
 		ms: idMs, seq: idSeq,
 	}
 
+	if (id.Compare(StreamEntryId{seq: 0, ms: 0 }) == 0) {
+		return errors.New("EERR The ID specified in XADD must be greater than 0-0")
+	}
+
 	entries := vm.value.([]StreamEntry)
 
 	if (len(entries) == 0) {
-		if (id.Compare(StreamEntryId{seq: 0, ms: 0 }) == 0) {
-			return errors.New("EERR The ID specified in XADD must be greater than 0-0")
-		}
-
 		entries = append(entries, StreamEntry{
 			id: id,
 			kv: opt.kv,
