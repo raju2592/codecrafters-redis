@@ -18,7 +18,7 @@ func XaddHandler(input []resp.RespValue, conn *ConnMeta) resp.RespValue {
 		kv[k] = v
 	} 
 
-	err := Xadd(key, XaddOptions{
+	id, err := Xadd(key, XaddOptions{
 		entryId: entryId,
 		kv: kv,
 	})
@@ -29,5 +29,5 @@ func XaddHandler(input []resp.RespValue, conn *ConnMeta) resp.RespValue {
 			Value: err.Error(),
 		}
 	}
-	return resp.RespValue{Ttype: resp.RespBulkString, Value: []byte(entryId)}
+	return resp.RespValue{Ttype: resp.RespBulkString, Value: []byte(id)}
 }

@@ -3,6 +3,7 @@ package commands
 import (
 	"cmp"
 	"errors"
+	"fmt"
 	"hash/fnv"
 	"math/rand"
 	"slices"
@@ -328,8 +329,8 @@ func LockKeys(keys []string) func() {
 }
 
 type StreamEntryId struct {
-	ms int;
-	seq int;
+	ms int64;
+	seq int64;
 }
 
 func (id StreamEntryId) Compare(b StreamEntryId) int {
@@ -337,6 +338,12 @@ func (id StreamEntryId) Compare(b StreamEntryId) int {
 			return cmp.Compare(id.ms, b.ms)
 	}
 	return cmp.Compare(id.seq, b.seq)
+}
+
+func (id StreamEntryId) String() string {
+	ms := strconv.FormatInt(id.ms, 10)
+	seq := strconv.FormatInt(id.seq, 10)
+	return ms + "-" + seq
 }
 
 type StreamEntry struct {
@@ -361,9 +368,50 @@ func loadValue(key string) (valueWithMeta, bool) {
 }
 
 
+// Fully auto-generate both parts, pass -1 for timestamp
+func generateEntryId(entries []StreamEntry, timestamp int64) (StreamEntryId, bool) {
+	n := len(entries)
+
+	if n == 0 {
+		if timestamp == -1 {
+			timestamp = time.Now().UnixMilli();
+		}
+
+		seq := 0
+		if timestamp == 0 {
+			seq = 1
+		}
+
+		return StreamEntryId{ms: timestamp, seq: int64(seq)}, true 
+	}
+
+	lastEntryId := entries[n - 1].id
+	
+	if timestamp == -1 {
+		curTs := time.Now().UnixMilli()
+
+		newMs := max(curTs, lastEntryId.ms)
+		newSeq := int64(0)
+		if lastEntryId.ms == newMs {
+			newSeq = lastEntryId.seq + 1
+		}
+		return StreamEntryId{ms: newMs, seq: newSeq}, true
+	} else {
+		if timestamp < lastEntryId.ms {
+			return StreamEntryId{}, false
+		}
+
+		if timestamp == lastEntryId.ms {
+			return StreamEntryId{ ms: timestamp, seq: lastEntryId.seq + 1}, true
+		}
+
+		return StreamEntryId{ms: timestamp, seq: 0}, true
+	}
+}
+
 // this currently does not handle 
 // existing key of diffrent type
-func Xadd(key string, opt XaddOptions) error {
+func Xadd(key string, opt XaddOptions) (string, error) {
 	i := getShardLock(key)
 	defer releaseShardLock(i)
 
@@ -376,29 +424,45 @@ func Xadd(key string, opt XaddOptions) error {
 		}
 	}
 
-	idParts := strings.Split(opt.entryId, "-")
-	invalidIdError := errors.New("ERR Invalid stream ID specified as stream command argument")
-	if len(idParts) != 2 {
-		return invalidIdError
-	}
-	idMs, err := strconv.Atoi(idParts[0])
-	if err != nil {
-		return invalidIdError
-	}
-	idSeq, err := strconv.Atoi(idParts[1])
-	if err != nil {
-		return invalidIdError
+	entries := vm.value.([]StreamEntry)
+
+	var id StreamEntryId
+
+	idLesserError :=  errors.New("ERR The ID specified in XADD is equal or smaller than the target stream top item")
+
+	if (opt.entryId == "*") {
+		id, _ = generateEntryId(entries, -1)
+	} else {
+		idParts := strings.Split(opt.entryId, "-")
+		invalidIdError := errors.New("ERR Invalid stream ID specified as stream command argument")
+		if len(idParts) != 2 {
+			return "", invalidIdError
+		}
+		idMs, err := strconv.ParseInt(idParts[0], 10, 64)
+		if err != nil {
+			return "", invalidIdError
+		}
+
+		if idParts[1] == "*" {
+			id, ok = generateEntryId(entries, idMs)
+			if !ok {
+				return "", idLesserError
+			}
+		} else {
+			idSeq, err := strconv.ParseInt(idParts[1], 10, 64)
+			if err != nil {
+				return "", invalidIdError
+			}
+			id = StreamEntryId{
+				ms: idMs, seq: idSeq,
+			}
+		}
 	}
 
-	id := StreamEntryId{
-		ms: idMs, seq: idSeq,
-	}
 
 	if (id.Compare(StreamEntryId{seq: 0, ms: 0 }) == 0) {
-		return errors.New("ERR The ID specified in XADD must be greater than 0-0")
+		return "", errors.New("ERR The ID specified in XADD must be greater than 0-0")
 	}
-
-	entries := vm.value.([]StreamEntry)
 
 	if (len(entries) == 0) {
 		entries = append(entries, StreamEntry{
@@ -408,8 +472,10 @@ func Xadd(key string, opt XaddOptions) error {
 
 	} else {
 		lastId := entries[len(entries) - 1].id
+		fmt.Println("last id " + lastId.String() + " " + id.String())
+		fmt.Printf("%d", lastId.Compare(id) )
 		if !(lastId.Compare(id) < 0) {
-			return errors.New("ERR The ID specified in XADD is equal or smaller than the target stream top item")
+			return "", idLesserError
 		}
 
 		entries = append(entries, StreamEntry{
@@ -423,5 +489,5 @@ func Xadd(key string, opt XaddOptions) error {
 	data.Store(key, vm)
 
 	dirtyWatchers(key)
-	return nil
+	return id.String(), nil
 }
