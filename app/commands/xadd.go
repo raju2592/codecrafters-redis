@@ -18,10 +18,16 @@ func XaddHandler(input []resp.RespValue, conn *ConnMeta) resp.RespValue {
 		kv[k] = v
 	} 
 
-	Xadd(key, XaddOptions{
+	err := Xadd(key, XaddOptions{
 		entryId: entryId,
 		kv: kv,
 	})
 	
+	if err != nil {
+		return resp.RespValue{
+			Ttype: resp.RespSimpleError,
+			Value: err.Error(),
+		}
+	}
 	return resp.RespValue{Ttype: resp.RespBulkString, Value: []byte(entryId)}
 }

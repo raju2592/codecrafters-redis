@@ -1,10 +1,13 @@
 package commands
 
 import (
+	"cmp"
+	"errors"
 	"hash/fnv"
 	"math/rand"
 	"slices"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -324,6 +327,23 @@ func LockKeys(keys []string) func() {
 	}
 }
 
+type StreamEntryId struct {
+	ms int;
+	seq int;
+}
+
+func (id StreamEntryId) Compare(b StreamEntryId) int {
+	if id.ms != b.ms {
+			return cmp.Compare(id.ms, b.ms)
+	}
+	return cmp.Compare(id.seq, b.seq)
+}
+
+type StreamEntry struct {
+	id StreamEntryId
+	kv map[string][]byte
+}
+
 type XaddOptions struct {
 	entryId string;
 	kv map[string][]byte
@@ -343,7 +363,7 @@ func loadValue(key string) (valueWithMeta, bool) {
 
 // this currently does not handle 
 // existing key of diffrent type
-func Xadd(key string, opt XaddOptions) {
+func Xadd(key string, opt XaddOptions) error {
 	i := getShardLock(key)
 	defer releaseShardLock(i)
 
@@ -352,14 +372,56 @@ func Xadd(key string, opt XaddOptions) {
 	if !ok {
 		vm = valueWithMeta{
 			ttype: TypeStream,
-			value: make(map[string]map[string][]byte),
+			value: make([]StreamEntry, 0),
 		}
 	}
 
-	entriesMap := vm.value.(map[string]map[string][]byte)
-	entriesMap[opt.entryId] = opt.kv
+	idParts := strings.Split(opt.entryId, "-")
+	invalidIdError := errors.New("ERR Invalid stream ID specified as stream command argument")
+	if len(idParts) != 2 {
+		return invalidIdError
+	}
+	idMs, err := strconv.Atoi(idParts[0])
+	if err != nil {
+		return invalidIdError
+	}
+	idSeq, err := strconv.Atoi(idParts[1])
+	if err != nil {
+		return invalidIdError
+	}
 
+	id := StreamEntryId{
+		ms: idMs, seq: idSeq,
+	}
+
+	entries := vm.value.([]StreamEntry)
+
+	if (len(entries) == 0) {
+		if (id.Compare(StreamEntryId{seq: 0, ms: 0 }) == 0) {
+			return errors.New("EERR The ID specified in XADD must be greater than 0-0")
+		}
+
+		entries = append(entries, StreamEntry{
+			id: id,
+			kv: opt.kv,
+		})
+
+	} else {
+		lastId := entries[len(entries) - 1].id
+		if !(lastId.Compare(id) < 0) {
+			return errors.New("ERR The ID specified in XADD is equal or smaller than the target stream top item")
+		}
+
+		entries = append(entries, StreamEntry{
+			id: id,
+			kv: opt.kv,
+		})
+
+	}
+
+	vm.value = entries
 	data.Store(key, vm)
 
 	dirtyWatchers(key)
+	return nil
 }
